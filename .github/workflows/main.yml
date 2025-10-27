@@ -21,11 +21,11 @@ jobs:
           distribution: 'temurin'
           java-version: '8'
 
-      # 3️⃣ Descargar Nukkit (dependencia)
+      # 3️⃣ Descargar la última versión estable de Nukkit
       - name: Download latest Nukkit jar
         run: |
           mkdir -p libs
-          curl -L -o libs/nukkit.jar https://repo.opencollab.dev/maven-snapshots/cn/nukkit/nukkit/1.0-SNAPSHOT/nukkit-1.0-20250805.172443-1219.jar
+          curl -L -o libs/nukkit.jar https://repo.opencollab.dev/maven-snapshots/cn/nukkit/nukkit/1.0-SNAPSHOT/nukkit-1.0-20220619.011414-1079.jar
 
       # 4️⃣ Compilar el plugin
       - name: Compile plugin
