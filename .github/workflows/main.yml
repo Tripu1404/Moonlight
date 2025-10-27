@@ -1,0 +1,52 @@
+name: Build Moonlight Anticheat Plugin
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout del repositorio
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2️⃣ Configurar Java 8 (o la versión que usa Moonlight)
+      - name: Set up Java 8
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+
+      # 3️⃣ Descargar Nukkit (dependencia para compilar)
+      - name: Download latest Nukkit jar
+        run: |
+          mkdir -p libs
+          curl -L -o libs/nukkit.jar https://repo.opencollab.dev/maven-snapshots/cn/nukkit/nukkit/1.0-SNAPSHOT/nukkit-1.0-20250805.172443-1219.jar
+
+      # 4️⃣ Compilar el plugin
+      - name: Compile plugin
+        run: |
+          mkdir -p out
+          javac -cp libs/nukkit.jar -d out $(find src -name "*.java")
+
+      # 5️⃣ Preparar contenido del JAR
+      - name: Package plugin
+        run: |
+          mkdir -p jar-content
+          cp plugin.yml jar-content/
+          cp config.yml jar-content/ || true
+          cp -r out/* jar-content/
+          cd jar-content
+          jar cf ../MoonlightPlugin.jar .
+          cd ..
+
+      # 6️⃣ Subir artefacto compilado
+      - name: Upload plugin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoonlightPlugin
+          path: MoonlightPlugin.jar
