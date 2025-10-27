@@ -7,14 +7,14 @@ import cn.nukkit.network.protocol.InventoryTransactionPacket;
 import cn.nukkit.network.protocol.MobEquipmentPacket;
 import cn.nukkit.network.protocol.MovePlayerPacket;
 import cn.nukkit.network.protocol.PlayerActionPacket;
-import cn.nukkit.utils.TextFormat;
 import com.disepi.moonlight.anticheat.Moonlight;
 import com.disepi.moonlight.anticheat.player.PlayerData;
 
 public class Check {
-    public String name, detection; // The basic information about the check
-    public float maxViolationScale; // How many violations it will take for Moonlight to punish the player
-    public int checkId; // Check identification number
+
+    public String name, detection; // Nombre y descripción del chequeo
+    public float maxViolationScale; // Límite de violaciones antes del castigo
+    public int checkId; // ID único
 
     // Constructor
     public Check(String name, String detection, float maxViolationScale) {
@@ -24,13 +24,15 @@ public class Check {
         this.checkId = Moonlight.checkAmount++;
     }
 
-    // Called upon a player failing the check.
+    // ⚠️ Ya no envía mensajes al staff
     public void fail(Player p, String debug) {
-        String message = Moonlight.stylizedChatString + p.getName() + TextFormat.GRAY + " failed " + TextFormat.WHITE + this.name + TextFormat.DARK_GRAY + " [" + debug + "]";
-        Moonlight.sendMessageToModerators(p, message);
+        // Antes: enviaba aviso al staff con Moonlight.sendMessageToModerators()
+        // Ahora: solo registra internamente, sin mostrar nada
+        // Si quieres dejar trazas en consola para debug, descomenta esta línea:
+        // System.out.println("[Moonlight] " + p.getName() + " failed " + this.name + " [" + debug + "]");
     }
 
-    // Teleports the player to an appropriate location.
+    // Teletransporta al jugador a la última posición segura
     public void lagback(Player p, PlayerData d, Vector3 pos) {
         d.resetMove = true;
         d.teleportPos = pos;
@@ -38,18 +40,20 @@ public class Check {
         p.teleport(pos);
     }
 
-    // Proxy function for above function
     public void lagback(Player p, PlayerData d) {
         this.lagback(p, d, d.lastGroundPos);
     }
 
-    // Violation functions
+    // Suma violación y evalúa castigo
     public void violate(Player player, PlayerData data, float amount, boolean punish) {
         data.violationMap[this.checkId] += amount;
-        if (punish && getViolationScale(data) > this.maxViolationScale)
-            punish(player, data); // We failed the check repeatedly, punish
+
+        if (punish && getViolationScale(data) > this.maxViolationScale) {
+            punish(player, data);
+        }
     }
 
+    // Reduce violaciones
     public void reward(PlayerData data, float amount) {
         data.violationMap[this.checkId] -= amount;
         if (data.violationMap[this.checkId] < 0)
@@ -60,26 +64,26 @@ public class Check {
         return data.violationMap[this.checkId];
     }
 
-    // Punishes the player.
+    // Aplica castigo según tipo de hack
     public void punish(Player p, PlayerData d) {
-        d.punish(p, this.name);
+        // Solo cancela Fly, Speed o Timer
+        if (isMovementRelated(this.name)) {
+            lagback(p, d);
+            fail(p, "Cancelled movement: " + this.name);
+        }
+        // Los demás tipos (KillAura, AutoClicker, etc.) no hacen nada visible
     }
 
-    // Below are override functions - they do nothing but they get overridden in standalone checks
-
-    public void check(MovePlayerPacket e, PlayerData d, Player p) {
+    // Verifica si el hack está relacionado con movimiento
+    private boolean isMovementRelated(String name) {
+        String lower = name.toLowerCase();
+        return lower.contains("fly") || lower.contains("speed") || lower.contains("timer");
     }
 
-    public void check(EntityDamageByEntityEvent e, PlayerData d, Player p) {
-    }
-
-    public void check(PlayerActionPacket e, PlayerData d, Player p) {
-    }
-
-    public void check(InventoryTransactionPacket e, PlayerData d, Player p) {
-    }
-
-    public void check(MobEquipmentPacket e, PlayerData d, Player p) {
-    }
-
+    // Métodos sobrescribibles para las detecciones específicas
+    public void check(MovePlayerPacket e, PlayerData d, Player p) {}
+    public void check(EntityDamageByEntityEvent e, PlayerData d, Player p) {}
+    public void check(PlayerActionPacket e, PlayerData d, Player p) {}
+    public void check(InventoryTransactionPacket e, PlayerData d, Player p) {}
+    public void check(MobEquipmentPacket e, PlayerData d, Player p) {}
 }
